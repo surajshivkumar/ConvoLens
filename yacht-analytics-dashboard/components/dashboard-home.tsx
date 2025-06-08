@@ -1,5 +1,6 @@
 "use client";
 import { supabase } from "../lib/supabase";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -36,7 +37,7 @@ import {
 
 const kpiData = [
   {
-    title: "Total Calls Today",
+    title: "Total Calls",
     value: "247",
     change: "+12%",
     trend: "up",
@@ -52,7 +53,7 @@ const kpiData = [
     color: "text-green-400",
   },
   {
-    title: "Customer Satisfaction",
+    title: "Frequent Sentiment",
     value: "4.8",
     change: "+0.2",
     trend: "up",
@@ -256,12 +257,14 @@ export function DashboardHome() {
                 Latest customer interactions
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              className="border-slate-600 text-slate-400 hover:bg-slate-800"
-            >
-              View All
-            </Button>
+            <Link href={"/conversations"}>
+              <Button
+                variant="outline"
+                className="border-slate-600 text-slate-400 hover:bg-slate-800"
+              >
+                View All
+              </Button>
+            </Link>
           </div>
         </CardHeader>
         <CardContent>
