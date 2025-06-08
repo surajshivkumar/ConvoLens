@@ -1,11 +1,38 @@
-"use client"
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Phone, Clock, Star, AlertTriangle, TrendingUp, TrendingDown, MoreHorizontal } from "lucide-react"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarChart, Bar } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+"use client";
+import { supabase } from "../lib/supabase";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Phone,
+  Clock,
+  Star,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
+  MoreHorizontal,
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 const kpiData = [
   {
@@ -40,7 +67,7 @@ const kpiData = [
     icon: AlertTriangle,
     color: "text-orange-400",
   },
-]
+];
 
 const callVolumeData = [
   { day: "Mon", calls: 180 },
@@ -50,7 +77,7 @@ const callVolumeData = [
   { day: "Fri", calls: 210 },
   { day: "Sat", calls: 165 },
   { day: "Sun", calls: 140 },
-]
+];
 
 const conversationTypesData = [
   { type: "GPS Issues", count: 45, color: "#06b6d4" },
@@ -58,7 +85,7 @@ const conversationTypesData = [
   { type: "Navigation", count: 32, color: "#3b82f6" },
   { type: "Equipment", count: 28, color: "#6366f1" },
   { type: "Maintenance", count: 24, color: "#8b5cf6" },
-]
+];
 
 const recentConversations = [
   {
@@ -101,7 +128,7 @@ const recentConversations = [
     agent: "Tom B.",
     time: "5 hours ago",
   },
-]
+];
 
 export function DashboardHome() {
   return (
@@ -116,7 +143,9 @@ export function DashboardHome() {
         {kpiData.map((kpi) => (
           <Card key={kpi.title} className="kpi-card card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-slate-400">{kpi.title}</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-400">
+                {kpi.title}
+              </CardTitle>
               <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
             </CardHeader>
             <CardContent>
@@ -140,7 +169,9 @@ export function DashboardHome() {
         <Card className="kpi-card card-hover">
           <CardHeader>
             <CardTitle className="text-white">Call Volume Trends</CardTitle>
-            <CardDescription className="text-slate-400">Last 7 days call volume</CardDescription>
+            <CardDescription className="text-slate-400">
+              Last 7 days call volume
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -153,7 +184,10 @@ export function DashboardHome() {
               className="h-[250px] w-full"
             >
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={callVolumeData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <LineChart
+                  data={callVolumeData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis dataKey="day" stroke="#9ca3af" fontSize={12} />
                   <YAxis stroke="#9ca3af" fontSize={12} />
@@ -175,7 +209,9 @@ export function DashboardHome() {
         <Card className="kpi-card card-hover">
           <CardHeader>
             <CardTitle className="text-white">Conversation Types</CardTitle>
-            <CardDescription className="text-slate-400">Distribution of support topics</CardDescription>
+            <CardDescription className="text-slate-400">
+              Distribution of support topics
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -188,10 +224,19 @@ export function DashboardHome() {
               className="h-[250px] w-full"
             >
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={conversationTypesData} margin={{ top: 20, right: 30, left: 80, bottom: 20 }}>
+                <BarChart
+                  data={conversationTypesData}
+                  margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                   <XAxis type="number" stroke="#9ca3af" fontSize={12} />
-                  <YAxis dataKey="type" type="category" stroke="#9ca3af" fontSize={12} width={70} />
+                  <YAxis
+                    dataKey="type"
+                    type="category"
+                    stroke="#9ca3af"
+                    fontSize={12}
+                    width={70}
+                  />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="count" fill="#06b6d4" radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -207,9 +252,14 @@ export function DashboardHome() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-white">Recent Conversations</CardTitle>
-              <CardDescription className="text-slate-400">Latest customer interactions</CardDescription>
+              <CardDescription className="text-slate-400">
+                Latest customer interactions
+              </CardDescription>
             </div>
-            <Button variant="outline" className="border-slate-600 text-slate-400 hover:bg-slate-800">
+            <Button
+              variant="outline"
+              className="border-slate-600 text-slate-400 hover:bg-slate-800"
+            >
               View All
             </Button>
           </div>
@@ -221,13 +271,27 @@ export function DashboardHome() {
                 <div className="flex items-center space-x-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-white">{conversation.customer}</p>
+                      <p className="font-medium text-white">
+                        {conversation.customer}
+                      </p>
                       <Badge
                         variant="secondary"
                         className={`
-                          ${conversation.sentiment === "Positive" ? "sentiment-positive" : ""}
-                          ${conversation.sentiment === "Neutral" ? "sentiment-neutral" : ""}
-                          ${conversation.sentiment === "Negative" ? "sentiment-negative" : ""}
+                          ${
+                            conversation.sentiment === "Positive"
+                              ? "sentiment-positive"
+                              : ""
+                          }
+                          ${
+                            conversation.sentiment === "Neutral"
+                              ? "sentiment-neutral"
+                              : ""
+                          }
+                          ${
+                            conversation.sentiment === "Negative"
+                              ? "sentiment-negative"
+                              : ""
+                          }
                         `}
                       >
                         {conversation.sentiment}
@@ -246,15 +310,33 @@ export function DashboardHome() {
                   <Badge
                     variant="outline"
                     className={`
-                      ${conversation.status === "Resolved" ? "status-resolved" : ""}
-                      ${conversation.status === "In Progress" ? "status-progress" : ""}
-                      ${conversation.status === "Escalated" ? "status-escalated" : ""}
+                      ${
+                        conversation.status === "Resolved"
+                          ? "status-resolved"
+                          : ""
+                      }
+                      ${
+                        conversation.status === "In Progress"
+                          ? "status-progress"
+                          : ""
+                      }
+                      ${
+                        conversation.status === "Escalated"
+                          ? "status-escalated"
+                          : ""
+                      }
                     `}
                   >
                     {conversation.status}
                   </Badge>
-                  <span className="text-sm text-slate-400">{conversation.time}</span>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white">
+                  <span className="text-sm text-slate-400">
+                    {conversation.time}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-400 hover:text-white"
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
@@ -318,5 +400,5 @@ export function DashboardHome() {
         </Card>
       </div>
     </div>
-  )
+  );
 }
