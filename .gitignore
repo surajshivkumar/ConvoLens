@@ -2,3 +2,4 @@
 /db_ingestion/.env
 /db_ingestion/**.DS_Store 
 __pycache__
+.env

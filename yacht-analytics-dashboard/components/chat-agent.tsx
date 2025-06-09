@@ -31,7 +31,19 @@ interface Message {
   type: "user" | "assistant";
   content: string;
   timestamp: Date;
+  sources?: CallSource[];
+  confidence?: string;
   isTyping?: boolean;
+}
+
+interface CallSource {
+  call_id: string;
+  agent: string;
+  customer: string;
+  topic: string;
+  sentiment: string;
+  date: string;
+  similarity: number;
 }
 
 interface ChatSession {
@@ -40,6 +52,8 @@ interface ChatSession {
   lastMessage: string;
   timestamp: Date;
 }
+
+const API_BASE_URL = "http://localhost:8000";
 
 const initialSessions: ChatSession[] = [
   {
@@ -62,22 +76,13 @@ const initialSessions: ChatSession[] = [
   },
 ];
 
-const sampleResponses = {
-  satisfaction:
-    "Based on the latest data, customer satisfaction has improved by 15% this month. The average rating is now 4.8/5.0, with GPS support showing the most significant improvement. Key factors include faster resolution times and better agent training.",
-  gps: "The most common GPS issues are: 1) Calibration errors (45% of cases), 2) Software freezing (30%), 3) Map update failures (15%), and 4) Hardware connectivity (10%). Most issues are resolved within 8 minutes on average.",
-  agent:
-    "Top performing agents this week: Sarah Johnson (4.9 rating, 95% resolution), Lisa Kim (4.8 rating, 97% resolution), Mike Rodriguez (4.7 rating, 92% resolution). Average handle time has decreased by 12% across all agents.",
-  default:
-    "I can help you analyze customer service data, review conversation trends, examine agent performance, and provide insights on common issues. What specific aspect would you like to explore?",
-};
-
 export function GeminiChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [currentSession, setCurrentSession] = useState("1");
   const [sessions, setSessions] = useState<ChatSession[]>(initialSessions);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -88,6 +93,25 @@ export function GeminiChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const callAPI = async (question: string, conversationHistory: any[]) => {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        question: question,
+        conversation_history: conversationHistory,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`);
+    }
+
+    return response.json();
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -100,40 +124,45 @@ export function GeminiChat() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = inputValue;
     setInputValue("");
     setIsTyping(true);
+    setError(null);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const lowerInput = inputValue.toLowerCase();
-      let response = sampleResponses.default;
+    try {
+      // Prepare conversation history
+      const conversationHistory = messages.slice(-6).map((msg) => ({
+        role: msg.type === "user" ? "user" : "assistant",
+        content: msg.content,
+      }));
 
-      for (const [key, value] of Object.entries(sampleResponses)) {
-        if (key !== "default" && lowerInput.includes(key)) {
-          response = value;
-          break;
-        }
-      }
+      const response = await callAPI(currentInput, conversationHistory);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "assistant",
-        content: response,
+        content: response.answer,
+        sources: response.sources || [],
+        confidence: response.confidence || "medium",
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-      setIsTyping(false);
 
       // Update session
       setSessions((prev) =>
         prev.map((session) =>
           session.id === currentSession
-            ? { ...session, lastMessage: inputValue, timestamp: new Date() }
+            ? { ...session, lastMessage: currentInput, timestamp: new Date() }
             : session
         )
       );
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || "Failed to get response");
+      console.error("API Error:", err);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -165,6 +194,32 @@ export function GeminiChat() {
     if (minutes < 60) return `${minutes}m ago`;
     if (hours < 24) return `${hours}h ago`;
     return `${days}d ago`;
+  };
+
+  const getSentimentColor = (sentiment: string) => {
+    switch (sentiment?.toLowerCase()) {
+      case "positive":
+        return "bg-green-500/30 text-green-300 border border-green-500/50";
+      case "negative":
+        return "bg-red-500/30 text-red-300 border border-red-500/50";
+      case "neutral":
+        return "bg-slate-500/30 text-slate-300 border border-slate-500/50";
+      default:
+        return "bg-cyan-500/30 text-cyan-300 border border-cyan-500/50";
+    }
+  };
+
+  const getConfidenceColor = (confidence: string) => {
+    switch (confidence) {
+      case "high":
+        return "text-green-300";
+      case "medium":
+        return "text-cyan-300";
+      case "low":
+        return "text-orange-300";
+      default:
+        return "text-slate-300";
+    }
   };
 
   return (
@@ -284,6 +339,15 @@ export function GeminiChat() {
               </div>
             )}
 
+            {error && (
+              <Card className="kpi-card border-red-500/50 bg-red-900/20">
+                <CardContent className="p-4 flex items-center gap-2">
+                  <div className="text-red-400">⚠️</div>
+                  <span className="text-red-400">{error}</span>
+                </CardContent>
+              </Card>
+            )}
+
             {messages.map((message) => (
               <div key={message.id} className="flex gap-4">
                 {message.type === "assistant" && (
@@ -306,6 +370,118 @@ export function GeminiChat() {
                     )}
                     <div className="whitespace-pre-wrap">{message.content}</div>
                   </div>
+
+                  {/* Sources Display */}
+                  {message.type === "assistant" &&
+                    message.sources &&
+                    message.sources.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-slate-400">
+                          <Sparkles className="h-4 w-4 text-cyan-400" />
+                          <span>
+                            {message.sources.length} relevant call
+                            {message.sources.length !== 1 ? "s" : ""} found
+                          </span>
+                          {message.confidence && (
+                            <span
+                              className={`text-xs px-2 py-1 rounded-full border ${getConfidenceColor(
+                                message.confidence
+                              )} border-current glow-cyan`}
+                            >
+                              {message.confidence} confidence
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid gap-2 max-w-2xl">
+                          {message.sources.slice(0, 3).map((source, index) => {
+                            // Parse source if it's a string with markdown formatting
+                            let parsedSource = source;
+                            if (typeof source === "string") {
+                              // Extract data from markdown string
+                              const callIdMatch =
+                                source.match(/Call ID:\s*([^\s-]+)/);
+                              const agentMatch = source.match(
+                                /Agent:\*\*\s*([^-]+?)\s*-/
+                              );
+                              const customerMatch = source.match(
+                                /Customer:\*\*\s*([^-]+?)\s*-/
+                              );
+                              const issueMatch =
+                                source.match(/Issue:\*\*\s*(.+)/);
+
+                              parsedSource = {
+                                call_id:
+                                  callIdMatch?.[1] ||
+                                  source.substring(0, 20) + "...",
+                                agent:
+                                  agentMatch?.[1]?.replace(/\*\*/g, "") ||
+                                  "Unknown Agent",
+                                customer:
+                                  customerMatch?.[1]?.replace(/\*\*/g, "") ||
+                                  "Unknown Customer",
+                                topic:
+                                  issueMatch?.[1]
+                                    ?.replace(/\*\*/g, "")
+                                    .substring(0, 50) + "..." ||
+                                  "Issue details",
+                                sentiment: "neutral",
+                                date: "Recent",
+                                similarity: 0.85,
+                              };
+                            }
+
+                            return (
+                              <Card key={index} className="kpi-card card-hover">
+                                <CardContent className="p-3">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-xs text-cyan-400 font-medium">
+                                          👤 {parsedSource.agent}
+                                        </span>
+                                        <span className="text-xs text-slate-500">
+                                          →
+                                        </span>
+                                        <span className="text-xs text-cyan-400 font-medium">
+                                          {parsedSource.customer}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span
+                                          className={`text-xs px-2 py-1 rounded-full ${getSentimentColor(
+                                            parsedSource.sentiment
+                                          )}`}
+                                        >
+                                          {parsedSource.sentiment || "neutral"}
+                                        </span>
+                                      </div>
+                                      <div className="text-xs text-slate-300 mb-2 line-clamp-2">
+                                        {parsedSource.topic}
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                                        <span>🕒</span>
+                                        <span>{parsedSource.date}</span>
+                                        <span>•</span>
+                                        <span>
+                                          {Math.round(
+                                            parsedSource.similarity * 100
+                                          )}
+                                          % match
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <div className="text-xs text-slate-500 font-mono">
+                                      {parsedSource.call_id.substring(0, 8)}...
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
 
                   {message.type === "assistant" && (
                     <div className="flex items-center gap-2 mt-3">
