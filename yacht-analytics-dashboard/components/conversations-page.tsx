@@ -53,12 +53,11 @@ interface Conversation {
   duration_seconds: number;
   call_timestamp: string;
   audio_url: string;
-  // Optional fields that might come from your database
-  status?: string;
-  sentiment?: string;
+  resolved: boolean;
+  sentiment: string;
   summary?: string;
   transcript?: string;
-  type?: string;
+  issue_type: string;
   tags?: string[];
 }
 
@@ -136,7 +135,7 @@ export function ConversationsPage() {
       conv.agent_name?.toLowerCase().includes(searchLower) ||
       conv.customer_email?.toLowerCase().includes(searchLower) ||
       conv.agent_email?.toLowerCase().includes(searchLower) ||
-      conv.type?.toLowerCase().includes(searchLower);
+      conv.issue_type?.toLowerCase().includes(searchLower);
 
     const matchesStatus =
       statusFilter === "all" || conv.status?.toLowerCase() === statusFilter;
@@ -359,9 +358,9 @@ export function ConversationsPage() {
                         <TableCell>
                           <Badge
                             variant="secondary"
-                            className="bg-slate-700 text-slate-300"
+                            className="border-violet-500 bg-gray-900 justify-center truncate"
                           >
-                            {conversation.type || "General"}
+                            {conversation.issue_type || "General"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-white">
@@ -372,24 +371,23 @@ export function ConversationsPage() {
                             variant="outline"
                             className={`
                             ${
-                              conversation.status?.toLowerCase() === "resolved"
+                              conversation.resolved === true
                                 ? "border-green-500 text-green-400"
                                 : ""
                             }
+                            
                             ${
-                              conversation.status?.toLowerCase() ===
-                              "in progress"
-                                ? "border-yellow-500 text-yellow-400"
-                                : ""
-                            }
-                            ${
-                              conversation.status?.toLowerCase() === "escalated"
-                                ? "border-red-500 text-red-400"
+                              conversation.resolved === false
+                                ? "border-orange-500 text-orange-400"
                                 : ""
                             }
                           `}
                           >
-                            {conversation.status || "Unknown"}
+                            {conversation.resolved === true && "Resolved"}
+                            {conversation.resolved === false && "Escalated"}
+                            {(conversation.resolved === null ||
+                              conversation.resolved === undefined) &&
+                              "Unknown"}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -508,31 +506,25 @@ export function ConversationsPage() {
                                           </div>
                                         )}
                                         <div className="flex items-center gap-4 mt-2">
-                                          {conversation.status && (
+                                          {conversation.resolved && (
                                             <Badge
                                               variant="outline"
                                               className={`
                                               ${
-                                                conversation.status.toLowerCase() ===
-                                                "resolved"
+                                                conversation.resolved === true
                                                   ? "border-green-500 text-green-400"
                                                   : ""
                                               }
+                                             
                                               ${
-                                                conversation.status.toLowerCase() ===
-                                                "in progress"
-                                                  ? "border-yellow-500 text-yellow-400"
-                                                  : ""
-                                              }
-                                              ${
-                                                conversation.status.toLowerCase() ===
-                                                "escalated"
+                                                conversation.resolved ===
+                                                "false"
                                                   ? "border-red-500 text-red-400"
                                                   : ""
                                               }
                                             `}
                                             >
-                                              {conversation.status}
+                                              {conversation.resolved}
                                             </Badge>
                                           )}
                                           {conversation.sentiment && (
