@@ -173,51 +173,58 @@ DO NOT TALK ABOUT HOW YOU GOT THIS RESPONSE like "based on the SQL query result.
 
 # --- RAG Answer Generator ---
 async def answer_with_rag(question: str, context_docs: List[Dict[str, Any]]) -> str:
-    context = "\n\n---\n\n".join(
-        doc["transcript"] for doc in context_docs if doc.get("transcript")
-    )
-    prompt = f"""
-You are a helpful assistant that analyzes customer service call data. Based on the provided call transcripts and metadata, answer the user's question and identify which calls are relevant sources.
+    # Serialize retrieved calls
+    context_json = "\n\n---\n\n".join(json.dumps(doc, indent=2) for doc in context_docs)
 
-Call Data (JSON format with transcripts and metadata):
-{context}
+    prompt = f"""
+You are a helpful assistant analyzing customer service call center data. Below is a list of call records (in JSON format), each containing metadata and transcripts.
+
+Your task:
+- Use this data to answer the user's question in a clear and informative way
+- Mention only the most relevant calls
+- Include details like call_id, agent_id, issue_type, sentiment, and a brief summary of each relevant call
+
+Call Data:
+{context_json}
 
 User Question:
 {question}
 
 Instructions:
-1. Analyze all the call transcripts to answer the question thoroughly
-2. Provide a medium-length answer (2-4 paragraphs)
-3. Identify which specific calls support your answer
-4. Extract ACTUAL metadata for each relevant call from the JSON
+1. Analyze the call transcripts and metadata
+2. Provide a 2–4 paragraph answer addressing the user's question
+3. Highlight which calls support your answer and why
+4. For each relevant call, extract:
+   - call_id
+   - agent_id
+   - call_timestamp
+   - issue_type
+   - sentiment
+   - summary (shortened if necessary)
+   - transcript snippet (first 1–2 sentences that are most relevant)
 
-IMPORTANT - For each relevant call, extract the REAL values from the JSON structure:
-- Find the actual "uuid" field value (like "019713bd-3268-86cd-9dd8-dd37220d739c")
-- Look in "parties" array, find where "role": "agent" and extract that party's "name" field
-- Look in "parties" array, find where "role": "customer" and extract that party's "name" field  
-- Extract the actual "created_at" timestamp value
-- Get the transcript from "analysis" array where "type": "transcript" or "diarized"
-
-Return your response in this exact format:
+Respond in *valid JSON* using the format:
 
 {{
-    "answer": "Your detailed response here (2-4 paragraphs explaining the answer based on the call data)",
-    "confidence": "high/medium/low", 
-    "sources": [
-        {{
-            "uid": "ACTUAL_UUID_FROM_JSON",
-            "agent": "ACTUAL_AGENT_NAME_FROM_PARTIES",
-            "customer": "ACTUAL_CUSTOMER_NAME_FROM_PARTIES",
-            "call_time": "ACTUAL_CREATED_AT_TIMESTAMP", 
-            "topic": "brief_description_of_what_this_call_was_about",
-            "relevance": "why_this_call_supports_the_answer"
-        }}
-    ]
+  "answer": "Your response here (2–4 paragraphs)",
+  "confidence": "high/medium/low",
+  "sources": [
+    {{
+      "call_id": "string",
+      "agent_id": "string",
+      "agent_name":"string",
+      "customer_name":"string",
+      "call_timestamp": "ISO timestamp",
+      "issue_type": "string",
+      "sentiment": "string",
+      "summary": "short summary of the call",
+      "relevance": "why this call supports the answer",
+      "transcript_snippet": "most relevant part of the transcript"
+    }}
+  ]
 }}
 
-DO NOT use placeholder values like "call_uuid_1" or "timestamp_1". Extract the real data from the provided JSON structure.
-
-Only include calls that actually support your answer. Return valid JSON only.
+Do NOT include any made-up data. Only use values present in the JSON above. Include only calls that are clearly relevant. Return valid JSON only.
 """
 
     response = openai_client.chat.completions.create(
