@@ -39,11 +39,11 @@ interface Message {
 }
 
 interface CallSource {
-  uid: string;
-  agent: string;
-  customer: string;
-  call_time: string;
-  topic: string;
+  call_id: string;
+  agent_name: string;
+  customer_name: string;
+  call_timestamp: string;
+  issue_type: string;
 }
 
 interface ChatSession {
@@ -107,9 +107,9 @@ const SourceCards = ({ sources }: { sources: CallSource[] }) => {
       <div className="space-y-2">
         {sources.map((source, index) => (
           <Card
-            key={source.uid}
+            key={source.call_id}
             className="kpi-card card-hover cursor-pointer transition-all duration-200 hover:border-cyan-500/50 hover:glow-cyan"
-            onClick={() => handleCardClick(source.uid)}
+            onClick={() => handleCardClick(source.call_id)}
           >
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
@@ -121,10 +121,10 @@ const SourceCards = ({ sources }: { sources: CallSource[] }) => {
                   </div>
                   <div>
                     <div className="text-sm font-medium text-white">
-                      {source.agent} → {source.customer}
+                      {source.agent_name} → {source.customer_name}
                     </div>
                     <div className="text-xs text-slate-400">
-                      {source.topic} • {formatDate(source.call_time)}
+                      {source.issue_type} • {formatDate(source.call_timestamp)}
                     </div>
                   </div>
                 </div>
@@ -199,7 +199,7 @@ export function GeminiChat() {
       }));
 
       const response = await callAPI(currentInput, conversationHistory);
-      console.log(response);
+      // console.log(response);
       let parsedContent;
       try {
         parsedContent = JSON.parse(response.answer);
@@ -208,6 +208,7 @@ export function GeminiChat() {
         // Fallback to original content if parsing fails
         parsedContent = { answer: response.content };
       }
+      console.log(parsedContent.sources);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
