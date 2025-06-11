@@ -39,7 +39,7 @@ const navigation = [
     icon: BarChart3,
   },
   {
-    title: "chat",
+    title: "Chat",
     url: "/chat-assistant",
     icon: Bot,
   },
