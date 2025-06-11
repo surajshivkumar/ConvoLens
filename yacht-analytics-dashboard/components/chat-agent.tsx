@@ -199,7 +199,7 @@ export function GeminiChat() {
       }));
 
       const response = await callAPI(currentInput, conversationHistory);
-      // console.log(response);
+      console.log(response);
       let parsedContent;
       try {
         parsedContent = JSON.parse(response.answer);

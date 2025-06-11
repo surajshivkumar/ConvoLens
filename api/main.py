@@ -5,11 +5,13 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import openai
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from supabase import create_client, Client
 import asyncio
 from dotenv import load_dotenv
 import json
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,6 +36,8 @@ app.add_middleware(
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_KEY")
+GOOGLE_CALENDAR_CREDENTIALS = os.getenv("GOOGLE_CALENDAR_CREDENTIALS")
+CAL_ID = os.getenv("CALENDAR_ID")
 
 # Initialize clients
 openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
@@ -66,11 +70,12 @@ class CallSource(BaseModel):
 # --- Prompt Classifier ---
 async def classify_prompt(prompt: str) -> str:
     guide = f"""
-You are a classifier. Return one word only: "sql" or "rag".
+You are a classifier. Return one word only: "sql", "rag", or "schedule".
 
 Return:
-- "sql" → if the prompt asks for counts, averages, date filters, or is structured.
-- "rag" → if the prompt is fuzzy, semantic, or about conversation details.
+- "sql" → for questions about counts, summaries, filters, or structured data eg. How many calls took place on May 21st 2025?
+- "rag" → for fuzzy, conversational, or semantic questions eg. Were there any calls about cancellations?
+- "schedule" → if the prompt is about creating calendar events, booking meetings, or scheduling something eg. Can you schedule a call with ralph tomorrow at 6pm?
 
 Prompt: "{prompt}"
 
@@ -96,6 +101,63 @@ async def get_embedding(text: str) -> List[float]:
         raise HTTPException(status_code=500, detail="Failed to generate embedding")
 
 
+async def extract_datetime_from_prompt(prompt: str) -> Optional[datetime]:
+    guide = f"""
+You are a helpful assistant that extracts datetime from natural language.
+
+Given a user prompt like:
+- "schedule a call at 4 PM today"
+- "set up a meeting tomorrow at 10:30am"
+- "book something on Friday at 3pm"
+
+Return the time in this format (ISO 8601): "YYYY-MM-DDTHH:MM:SS"
+
+If you cannot confidently find a datetime, just return "none".
+
+Today is: {datetime.now().strftime('%A, %B %d, %Y')}
+
+Prompt: "{prompt}"
+
+Extracted datetime:
+"""
+    response = openai_client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": guide}],
+        temperature=0,
+    )
+    dt_string = response.choices[0].message.content.strip()
+    if dt_string.lower() == "none":
+        return None
+    try:
+        return datetime.fromisoformat(dt_string)
+    except Exception as e:
+        print(f"Parse error: {e}, raw output: {dt_string}")
+        return None
+
+
+async def extract_meeting_title(prompt: str) -> str:
+    guide = f"""
+You are a helpful assistant that generates a clean, human-readable meeting title based on a user's scheduling prompt.
+
+Examples:
+- "schedule a call with Ralph today at 7 pm" → "Call with Ralph"
+- "set up a sync with Alice and Bob tomorrow" → "Sync with Alice and Bob"
+- "book a quick chat with HR at 4 PM" → "Chat with HR"
+- "schedule a planning meeting with marketing" → "Planning Meeting with Marketing"
+- "set a follow-up call with John" → "Follow-up Call with John"
+
+Prompt: "{prompt}"
+
+Meeting title:
+"""
+    response = openai_client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": guide}],
+        temperature=0,
+    )
+    return response.choices[0].message.content.strip().strip('"')
+
+
 async def search_call_database(
     query_embedding: List[float], limit: int = 5
 ) -> List[Dict]:
@@ -112,6 +174,35 @@ async def search_call_database(
     except Exception as e:
         print(f"Search error: {e}")
         return []
+
+
+def schedule_call_event(
+    start_dt: datetime, summary="Call with agent", timezone="America/New_York"
+):
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+
+    SERVICE_ACCOUNT_FILE = GOOGLE_CALENDAR_CREDENTIALS
+    CALENDAR_ID = CAL_ID
+    SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    service = build("calendar", "v3", credentials=credentials)
+
+    end_dt = start_dt + timedelta(minutes=30)
+
+    event = {
+        "summary": summary,
+        "description": "Call scheduled via FastAPI + service account",
+        "start": {"dateTime": start_dt.isoformat(), "timeZone": timezone},
+        "end": {"dateTime": end_dt.isoformat(), "timeZone": timezone},
+        "attendees": [],
+    }
+
+    event_result = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
+    return event_result.get("htmlLink")
 
 
 # --- SQL Helpers ---
@@ -286,6 +377,33 @@ async def chat_with_calls(request: ChatRequest):
                 context_used=[json.dumps(result[:1])],
                 timestamp=datetime.now().isoformat(),
             )
+
+        elif mode == "schedule":
+            dt = await extract_datetime_from_prompt(request.question)
+            if not dt:
+                raise HTTPException(
+                    status_code=400, detail="Could not extract time from your prompt."
+                )
+
+            title = await extract_meeting_title(request.question)
+
+            try:
+                link = schedule_call_event(start_dt=dt, summary=title)
+                responseSchedule = f"""Scheduled a meeting titled {title} at {dt.strftime('%I:%M %p on %B %d')}.\nHere's your event: {link}"""
+
+                responseSchedule = json.dumps({"answer": responseSchedule})
+                sourcesString = json.dumps({"link": link})
+                return ChatResponse(
+                    answer=responseSchedule,
+                    # answer=
+                    sources=[{"link": link}],
+                    context_used=[request.question],
+                    timestamp=datetime.now().isoformat(),
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500, detail=f"Scheduling failed: {str(e)}"
+                )
 
         else:
             query_embedding = await get_embedding(request.question)
