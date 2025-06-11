@@ -1,11 +1,12 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Mic, MicOff, Send, X } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { useState, useEffect, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Mic, MicOff, Send, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import Vapi from "@vapi-ai/web";
 
 const exampleQueries = [
   "Show me frustrated customers this week",
@@ -13,71 +14,138 @@ const exampleQueries = [
   "Which agent has the highest satisfaction?",
   "How many calls were escalated today?",
   "What's the average resolution time?",
-]
-
-const mockResponses = {
-  "frustrated customers":
-    "I found 12 customers with negative sentiment this week. The main issues were GPS calibration (5 cases) and engine performance (4 cases). Would you like me to show you the detailed breakdown?",
-  "gps issues":
-    "GPS-related issues account for 32% of all calls this week. The most common problems are: calibration errors (45%), system freezing (30%), and map updates (25%). Sarah Johnson has resolved the most GPS cases with a 98% success rate.",
-  "highest satisfaction":
-    "Lisa Kim has the highest customer satisfaction rating at 4.9/5.0 this week, followed by Sarah Johnson at 4.8/5.0. Lisa has handled 38 calls with a 97% resolution rate.",
-  "escalated today":
-    "15 calls were escalated today, which is 6% of total calls. Main escalation reasons: complex technical issues (8), billing disputes (4), and warranty claims (3).",
-  "resolution time":
-    "The current average resolution time is 8.7 minutes, which is an 8% improvement from last week. The fastest resolver is Lisa Kim at 7.8 minutes average.",
-}
+];
 
 export function VoiceAssistant() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [isListening, setIsListening] = useState(false)
-  const [messages, setMessages] = useState([])
-  const [inputValue, setInputValue] = useState("")
+  const [isOpen, setIsOpen] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState("");
+  const [vapi, setVapi] = useState(null);
+  const [isCallActive, setIsCallActive] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const handleVoiceToggle = () => {
-    setIsListening(!isListening)
-    if (!isListening) {
-      // Simulate voice recognition
-      setTimeout(() => {
-        setIsListening(false)
-        handleQuery("Show me frustrated customers this week")
-      }, 3000)
-    }
-  }
+  // Auto scroll to bottom when messages change
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      }
+    };
 
-  const handleQuery = (query) => {
-    const newMessage = { type: "user", content: query, timestamp: new Date() }
-    setMessages((prev) => [...prev, newMessage])
+    // Small delay to ensure DOM has updated
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timeoutId);
+  }, [messages]);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const lowerQuery = query.toLowerCase()
-      let response = "I'm not sure about that. Could you try rephrasing your question?"
+  useEffect(() => {
+    // Initialize Vapi Web SDK
+    const vapiInstance = new Vapi(process.env.NEXT_PUBLIC_VAPI_API_KEY);
+    setVapi(vapiInstance);
 
-      for (const [key, value] of Object.entries(mockResponses)) {
-        if (lowerQuery.includes(key)) {
-          response = value
-          break
-        }
+    // Handle call lifecycle events
+    vapiInstance.on("call-start", () => {
+      setIsConnected(true);
+      setIsCallActive(true);
+      console.log("Call started");
+    });
+
+    vapiInstance.on("call-end", () => {
+      setIsConnected(false);
+      setIsCallActive(false);
+      console.log("Call ended");
+    });
+
+    // Handle real-time conversation messages
+    vapiInstance.on("message", (message) => {
+      console.log("Vapi message:", message);
+
+      if (message.type === "transcript") {
+        const newMessage = {
+          type: message.role === "user" ? "user" : "ai",
+          content: message.transcript,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, newMessage]);
       }
 
-      const aiMessage = { type: "ai", content: response, timestamp: new Date() }
-      setMessages((prev) => [...prev, aiMessage])
-    }, 1000)
+      // Handle function calls if your assistant uses them
+      if (message.type === "function-call") {
+        console.log("Function call:", message);
+        // Handle any function calls your assistant might make
+      }
 
-    setInputValue("")
-  }
+      // Handle speech updates for real-time transcription
+      if (message.type === "speech-update") {
+        console.log("Speech update:", message);
+      }
+    });
+
+    vapiInstance.on("error", (error) => {
+      console.error("Vapi error:", error);
+      setIsConnected(false);
+      setIsCallActive(false);
+    });
+
+    // Cleanup on component unmount
+    return () => {
+      vapiInstance?.stop();
+    };
+  }, []);
+
+  const startVoiceCall = async () => {
+    if (!vapi) return;
+
+    try {
+      // Replace 'YOUR_ASSISTANT_ID' with your actual assistant ID
+      await vapi.start(process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID);
+    } catch (error) {
+      console.error("Failed to start call:", error);
+    }
+  };
+
+  const endVoiceCall = () => {
+    if (vapi && isCallActive) {
+      vapi.stop();
+    }
+  };
+
+  const handleVoiceToggle = () => {
+    if (isCallActive) {
+      endVoiceCall();
+    } else {
+      startVoiceCall();
+    }
+  };
+
+  const handleTextQuery = (query) => {
+    // For text input, you can either:
+    // 1. Start a voice call and let the assistant respond
+    // 2. Use a separate text-based API endpoint
+    // 3. Convert text to speech and use voice call
+
+    const newMessage = { type: "user", content: query, timestamp: new Date() };
+    setMessages((prev) => [...prev, newMessage]);
+
+    // Option 1: Start voice call for text input
+    if (!isCallActive) {
+      startVoiceCall();
+      // You might want to use text-to-speech to "speak" the query
+    }
+
+    setInputValue("");
+  };
 
   const handleSendMessage = () => {
     if (inputValue.trim()) {
-      handleQuery(inputValue)
+      handleTextQuery(inputValue);
     }
-  }
+  };
 
   const handleExampleQuery = (query) => {
-    handleQuery(query)
-    setIsOpen(true)
-  }
+    handleTextQuery(query);
+    setIsOpen(true);
+  };
 
   return (
     <>
@@ -85,11 +153,13 @@ export function VoiceAssistant() {
       <div className="fixed bottom-6 right-6 z-50">
         {!isOpen && (
           <div className="relative">
-            {isListening && <div className="absolute inset-0 rounded-full bg-cyan-500/30 pulse-ring"></div>}
+            {isConnected && (
+              <div className="absolute inset-0 rounded-full bg-cyan-500/30 pulse-ring"></div>
+            )}
             <Button
               onClick={() => setIsOpen(true)}
               className={`h-14 w-14 rounded-full marine-gradient glow-blue hover:glow-cyan transition-all duration-300 ${
-                isListening ? "scale-110" : ""
+                isConnected ? "scale-110" : ""
               }`}
             >
               <Mic className="h-6 w-6 text-white" />
@@ -108,6 +178,11 @@ export function VoiceAssistant() {
                   <Mic className="h-4 w-4 text-white" />
                 </div>
                 Voice Assistant
+                {isConnected && (
+                  <Badge className="bg-green-500/20 text-green-400 ml-2">
+                    Connected
+                  </Badge>
+                )}
               </CardTitle>
               <Button
                 variant="ghost"
@@ -125,10 +200,20 @@ export function VoiceAssistant() {
                   <div className="text-center text-slate-400 py-8">
                     <Mic className="h-8 w-8 mx-auto mb-2 text-slate-500" />
                     <p>Ask me anything about your customer service data</p>
+                    <p className="text-xs mt-2">
+                      Click the mic to start voice chat
+                    </p>
                   </div>
                 ) : (
                   messages.map((message, index) => (
-                    <div key={index} className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      key={index}
+                      className={`flex ${
+                        message.type === "user"
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
                       <div
                         className={`max-w-[80%] p-3 rounded-lg ${
                           message.type === "user"
@@ -137,11 +222,15 @@ export function VoiceAssistant() {
                         }`}
                       >
                         <p className="text-sm">{message.content}</p>
-                        <p className="text-xs opacity-70 mt-1">{message.timestamp.toLocaleTimeString()}</p>
+                        <p className="text-xs opacity-70 mt-1">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
                       </div>
                     </div>
                   ))
                 )}
+                {/* Scroll anchor */}
+                <div ref={messagesEndRef} className="h-1" />
               </div>
 
               {/* Example Queries */}
@@ -168,13 +257,19 @@ export function VoiceAssistant() {
               <div className="flex items-center gap-2">
                 <Button
                   onClick={handleVoiceToggle}
-                  variant={isListening ? "destructive" : "outline"}
+                  variant={isCallActive ? "destructive" : "outline"}
                   size="icon"
                   className={`${
-                    isListening ? "bg-red-500 hover:bg-red-600" : "border-slate-600 text-slate-400 hover:bg-slate-800"
+                    isCallActive
+                      ? "bg-red-500 hover:bg-red-600"
+                      : "border-slate-600 text-slate-400 hover:bg-slate-800"
                   }`}
                 >
-                  {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  {isCallActive ? (
+                    <MicOff className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
                 </Button>
 
                 <div className="flex-1 flex gap-2">
@@ -184,17 +279,26 @@ export function VoiceAssistant() {
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                     className="bg-slate-800 border-slate-600 focus:border-cyan-500"
+                    disabled={isCallActive}
                   />
-                  <Button onClick={handleSendMessage} size="icon" className="bg-cyan-500 hover:bg-cyan-600">
+                  <Button
+                    onClick={handleSendMessage}
+                    size="icon"
+                    className="bg-cyan-500 hover:bg-cyan-600"
+                    disabled={isCallActive}
+                  >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
-              {isListening && (
+              {isConnected && (
                 <div className="text-center">
-                  <Badge variant="secondary" className="bg-red-500/20 text-red-400">
-                    Listening...
+                  <Badge
+                    variant="secondary"
+                    className="bg-green-500/20 text-green-400"
+                  >
+                    {isCallActive ? "Voice Active - Speak now" : "Connected"}
                   </Badge>
                 </div>
               )}
@@ -203,5 +307,5 @@ export function VoiceAssistant() {
         </div>
       )}
     </>
-  )
+  );
 }
