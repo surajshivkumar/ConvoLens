@@ -73,9 +73,9 @@ async def classify_prompt(prompt: str) -> str:
 You are a classifier. Return one word only: "sql", "rag", or "schedule".
 
 Return:
-- "sql" → for questions about counts, summaries, filters, or structured data
-- "rag" → for fuzzy, conversational, or semantic questions
-- "schedule" → if the prompt is about creating calendar events, booking meetings, or scheduling something
+- "sql" → for questions about counts, summaries, filters, or structured data eg. How many calls took place on May 21st 2025?
+- "rag" → for fuzzy, conversational, or semantic questions eg. Were there any calls about cancellations?
+- "schedule" → if the prompt is about creating calendar events, booking meetings, or scheduling something eg. Can you schedule a call with ralph tomorrow at 6pm?
 
 Prompt: "{prompt}"
 
@@ -99,6 +99,7 @@ async def get_embedding(text: str) -> List[float]:
     except Exception as e:
         print(f"Embedding error: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate embedding")
+
 
 async def extract_datetime_from_prompt(prompt: str) -> Optional[datetime]:
     guide = f"""
@@ -132,6 +133,7 @@ Extracted datetime:
     except Exception as e:
         print(f"Parse error: {e}, raw output: {dt_string}")
         return None
+
 
 async def extract_meeting_title(prompt: str) -> str:
     guide = f"""
@@ -173,31 +175,35 @@ async def search_call_database(
         print(f"Search error: {e}")
         return []
 
-def schedule_call_event(start_dt: datetime, summary="Call with agent", timezone="America/New_York"):
+
+def schedule_call_event(
+    start_dt: datetime, summary="Call with agent", timezone="America/New_York"
+):
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
 
-    SERVICE_ACCOUNT_FILE = GOOGLE_CALENDAR_CREDENTIALS 
+    SERVICE_ACCOUNT_FILE = GOOGLE_CALENDAR_CREDENTIALS
     CALENDAR_ID = CAL_ID
-    SCOPES = ['https://www.googleapis.com/auth/calendar']
+    SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
     credentials = service_account.Credentials.from_service_account_file(
         SERVICE_ACCOUNT_FILE, scopes=SCOPES
     )
-    service = build('calendar', 'v3', credentials=credentials)
+    service = build("calendar", "v3", credentials=credentials)
 
     end_dt = start_dt + timedelta(minutes=30)
 
     event = {
-        'summary': summary,
-        'description': 'Call scheduled via FastAPI + service account',
-        'start': {'dateTime': start_dt.isoformat(), 'timeZone': timezone},
-        'end': {'dateTime': end_dt.isoformat(), 'timeZone': timezone},
-        'attendees': [],
+        "summary": summary,
+        "description": "Call scheduled via FastAPI + service account",
+        "start": {"dateTime": start_dt.isoformat(), "timeZone": timezone},
+        "end": {"dateTime": end_dt.isoformat(), "timeZone": timezone},
+        "attendees": [],
     }
 
     event_result = service.events().insert(calendarId=CALENDAR_ID, body=event).execute()
-    return event_result.get('htmlLink')
+    return event_result.get("htmlLink")
+
 
 # --- SQL Helpers ---
 async def generate_sql(prompt: str) -> str:
@@ -372,30 +378,32 @@ async def chat_with_calls(request: ChatRequest):
                 timestamp=datetime.now().isoformat(),
             )
 
-
-
         elif mode == "schedule":
             dt = await extract_datetime_from_prompt(request.question)
             if not dt:
-                raise HTTPException(status_code=400, detail="Could not extract time from your prompt.")
-            
+                raise HTTPException(
+                    status_code=400, detail="Could not extract time from your prompt."
+                )
+
             title = await extract_meeting_title(request.question)
 
             try:
                 link = schedule_call_event(start_dt=dt, summary=title)
+                responseSchedule = f"""Scheduled a meeting titled {title} at {dt.strftime('%I:%M %p on %B %d')}.\nHere's your event: {link}"""
+
+                responseSchedule = json.dumps({"answer": responseSchedule})
+                sourcesString = json.dumps({"link": link})
                 return ChatResponse(
-                    answer=f"✅ Scheduled a meeting titled **'{title}'** at {dt.strftime('%I:%M %p on %B %d')}.\nHere’s your event: {link}",
-                    sources=[],
+                    answer=responseSchedule,
+                    # answer=
+                    sources=[{"link": link}],
                     context_used=[request.question],
                     timestamp=datetime.now().isoformat(),
                 )
             except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Scheduling failed: {str(e)}")
-
-
-
-
-
+                raise HTTPException(
+                    status_code=500, detail=f"Scheduling failed: {str(e)}"
+                )
 
         else:
             query_embedding = await get_embedding(request.question)
