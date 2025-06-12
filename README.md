@@ -1,6 +1,6 @@
 # ConvoLens
 
-ConvoLens is a voice- and chat-enabled analytics platform built for analyzing customer service conversations. Developed for the [VCon Hackathon 2025](https://blog.tadhack.com/2025/05/10/vcon-tadhack/), ConvoLens uses a hybrid of structured SQL querying and RAG (Retrieval-Augmented Generation) to deliver deep insights into customer interactions.
+ConvoLens is a voice and chat-enabled analytics platform built for analyzing customer service conversations. Developed for the [VCon Hackathon 2025](https://blog.tadhack.com/2025/05/10/vcon-tadhack/), ConvoLens uses a hybrid of structured SQL querying and RAG (Retrieval-Augmented Generation) to deliver deep insights into customer interactions.
 
 ## 👥 Team
 
@@ -8,8 +8,10 @@ ConvoLens is a voice- and chat-enabled analytics platform built for analyzing cu
 - [Anish Babu Gogineni](https://github.com/anish-gogineni)
 
 
-## 🌐 Live Demo
-Coming soon...
+## 🌐 Video Demo
+
+Watch the demo here: [ConvoLens – VCon Hackathon 2025](https://www.youtube.com/watch?v=juw_ijYA8_k)
+
 
 ---
 
