@@ -1,6 +1,12 @@
 # ConvoLens
 
-ConvoLens is a voice- and chat-enabled analytics platform built for analyzing customer service conversations. Developed for the [VCon Hackathon 2025](https://github.com/vcon-dev/tadhack-2025), ConvoLens uses a hybrid of structured SQL querying and RAG (Retrieval-Augmented Generation) to deliver deep insights into customer interactions.
+ConvoLens is a voice- and chat-enabled analytics platform built for analyzing customer service conversations. Developed for the [VCon Hackathon 2025](https://blog.tadhack.com/2025/05/10/vcon-tadhack/), ConvoLens uses a hybrid of structured SQL querying and RAG (Retrieval-Augmented Generation) to deliver deep insights into customer interactions.
+
+## 👥 Team
+
+- [Suraj Shiva Kumar](https://github.com/surajshivkumar)
+- [Anish Babu Gogineni](https://github.com/anish-gogineni)
+
 
 ## 🌐 Live Demo
 Coming soon...
@@ -60,7 +66,6 @@ We used synthetic `.vcon.json` call data from **Aquidneck Yacht Brokers**, avail
 .
 ├── api/                          # FastAPI backend
 │   ├── main.py
-|
 ├── yacht-analytics-dashboard/    # Next.js frontend
 │   ├── app/
 │   ├── components/
@@ -76,11 +81,9 @@ We used synthetic `.vcon.json` call data from **Aquidneck Yacht Brokers**, avail
 │   └── postcss.config.mjs
 │   └── tailwind.config.ts
 │   └── tsconfig.json
-|
 ├── db_ingestion/                 # Python scripts for ingestion
 │   └── config.py
 │   └── ingest_vcon.py
-|
 ├── supabase/                     # SQL schema & functions
 │   └── schema.sql
 │   └── supabase_functions/
@@ -93,6 +96,5 @@ We used synthetic `.vcon.json` call data from **Aquidneck Yacht Brokers**, avail
 │       └── get_weekday_call_counts.sql
 │       └── match_calls.sql
 │       └── search_similar_calls.sql
-|
 ├── .env.example
 └── README.md
