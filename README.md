@@ -29,6 +29,7 @@ We used synthetic `.vcon.json` call data from **Aquidneck Yacht Brokers**, avail
 - Determines whether to use:
   - **SQL Query** (for structured questions)
   - **RAG + Embedding Search** (for semantic questions)
+  - **Google Meet Scheduling** (for meeting-related prompts)
 - Returns **human-like answers** using OpenAI completions
 
 ### 🖥️ Frontend (Next.js)
@@ -42,13 +43,14 @@ We used synthetic `.vcon.json` call data from **Aquidneck Yacht Brokers**, avail
 
 ## 🧰 Tech Stack
 
-| Layer          | Technology               |
-|----------------|---------------------------|
-| Frontend       | Next.js (React)           |
-| Backend        | FastAPI (Python)          |
-| Database       | Supabase (Postgres + pgvector) |
-| AI             | OpenAI (Embeddings + Completion) |
-| Voice Assistant| Vapi.ai                   |
+| Layer          | Technology                        |
+|----------------|------------------------------------|
+| Frontend       | Next.js (React)                   |
+| Backend        | FastAPI (Python)                  |
+| Database       | Supabase (Postgres + pgvector)    |
+| AI             | OpenAI (Embeddings + Completion)  |
+| Voice Assistant| Vapi.ai                           |
+| Meeting API    | Google Meet (Calendar API)        |
 
 ---
 
@@ -56,17 +58,41 @@ We used synthetic `.vcon.json` call data from **Aquidneck Yacht Brokers**, avail
 
 ```bash
 .
-├── api/                    # FastAPI backend
+├── api/                          # FastAPI backend
 │   ├── main.py
-│   ├── routes/
-│   └── utils/
-├── frontend/               # Next.js frontend
-│   ├── pages/
+|
+├── yacht-analytics-dashboard/    # Next.js frontend
+│   ├── app/
 │   ├── components/
+│   └── hooks/
+│   └── lib/
+│   └── piblic/
 │   └── styles/
-├── scripts/                # Python scripts for ingestion
+│   └── components.json
+│   └── next.config.mjs
+│   └── package-lock.json
+│   └── package.json
+│   └── pnpm-lock.yaml
+│   └── postcss.config.mjs
+│   └── tailwind.config.ts
+│   └── tsconfig.json
+|
+├── db_ingestion/                 # Python scripts for ingestion
+│   └── config.py
 │   └── ingest_vcon.py
-├── supabase/               # SQL schema and seed data
+|
+├── supabase/                     # SQL schema & functions
 │   └── schema.sql
+│   └── supabase_functions/
+│       └── get_call_center_metrics.sql
+│       └── get_call_summary.sql
+│       └── get_daily_resolution_status.sql
+│       └── get_daily_sentiment_pct.sql
+│       └── get_issue_counts.sql
+│       └── get_issue_distribution.sql
+│       └── get_weekday_call_counts.sql
+│       └── match_calls.sql
+│       └── search_similar_calls.sql
+|
 ├── .env.example
 └── README.md
