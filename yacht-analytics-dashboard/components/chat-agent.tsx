@@ -55,26 +55,7 @@ interface ChatSession {
 
 const API_BASE_URL = "http://localhost:8000";
 
-const initialSessions: ChatSession[] = [
-  {
-    id: "1",
-    title: "Customer Satisfaction Analysis",
-    lastMessage: "Show me the satisfaction trends for this month",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-  },
-  {
-    id: "2",
-    title: "GPS Issue Investigation",
-    lastMessage: "What are the most common GPS problems?",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-  },
-  {
-    id: "3",
-    title: "Agent Performance Review",
-    lastMessage: "Compare agent performance metrics",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-  },
-];
+const initialSessions: ChatSession[] = [];
 
 // Source Cards Component
 const SourceCards = ({ sources }: { sources: CallSource[] }) => {
@@ -346,7 +327,7 @@ export function GeminiChat() {
               </div>
               <div>
                 <h1 className="font-semibold text-white">
-                  Yacht Analytics Assistant
+                  ConvoLens Assistant
                 </h1>
                 <p className="text-sm text-slate-400">Powered by AI</p>
               </div>
@@ -382,7 +363,7 @@ export function GeminiChat() {
                   <Sparkles className="h-8 w-8 text-white" />
                 </div>
                 <h2 className="text-2xl font-semibold text-white mb-2">
-                  Hello! I'm your Yacht Analytics Assistant
+                  Hello! I'm your ConvoLens Assistant
                 </h2>
                 <p className="text-slate-400 mb-6">
                   I can help you analyze customer service data, review
@@ -390,8 +371,8 @@ export function GeminiChat() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
                   {[
-                    "Show me customer satisfaction trends",
-                    "What are the most common GPS issues?",
+                    "Summarize calls on 24th May 2025",
+                    "What are the most common issues?",
                     "Compare agent performance metrics",
                     "Analyze call volume patterns",
                   ].map((suggestion, index) => (
