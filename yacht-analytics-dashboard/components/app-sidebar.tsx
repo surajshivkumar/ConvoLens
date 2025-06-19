@@ -61,9 +61,7 @@ export function AppSidebar() {
             <Anchor className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">
-              Yacht Analytics
-            </h2>
+            <h2 className="text-lg font-semibold text-white">ConvoLens</h2>
             <p className="text-sm text-slate-400">Customer Service</p>
           </div>
         </div>

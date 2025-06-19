@@ -107,7 +107,7 @@ You are a helpful assistant that extracts datetime from natural language.
 
 Given a user prompt like:
 - "schedule a call at 4 PM today"
-- "set up a meeting tomorrow at 10:30am"
+- "set up a ngmeeti tomorrow at 10:30am"
 - "book something on Friday at 3pm"
 
 Return the time in this format (ISO 8601): "YYYY-MM-DDTHH:MM:SS"
